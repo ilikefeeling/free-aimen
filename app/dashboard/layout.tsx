@@ -178,10 +178,13 @@ export default function DashboardLayout({
 
             {/* Simple Footer */}
             <footer className="py-8 bg-navy-darker border-t border-gold/5">
-                <div className="max-w-7xl mx-auto px-4 text-center">
+                <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
                     <p className="text-gray-500 text-sm">
                         &copy; 2024 AI-MEN. All rights reserved.
                     </p>
+                    <Link href="/privacy" className="text-gray-600 text-xs hover:text-gold transition-colors">
+                        Privacy Policy
+                    </Link>
                 </div>
             </footer>
             {/* Api Key Selection Modal */}

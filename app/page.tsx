@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import {
@@ -327,7 +328,7 @@ export default function HomePage() {
             <p>&copy; 2026 AI-men. All Glory to God. 에이아이멘 미디어 그룹.</p>
             <div className="flex gap-12">
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
               <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
             </div>
           </div>

@@ -16,13 +16,19 @@ const cinzel = Cinzel({
   variable: "--font-cinzel",
 });
 
+export const viewport = {
+  themeColor: "#FEE500",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "aimen (에이아이멘) - AI 기반 설교 콘텐츠 자동화",
   description: "주일의 은혜를 평일의 일상으로. Gemini AI로 설교 하이라이트를 자동 추출하고 숏폼 영상으로 편집하세요.",
   keywords: ["설교", "하이라이트", "AI", "영상편집", "교회", "콘텐츠", "숏폼"],
   manifest: "/manifest.json",
-  themeColor: "#FEE500",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
 };
 
 export default function RootLayout({
