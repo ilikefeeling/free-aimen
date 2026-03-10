@@ -11,12 +11,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // eslint: {
-  //   ignoreDuringBuilds: true,
-  // },
-  // turbopack: {
-  //   root: '.',
-  // },
+  turbopack: {},
   webpack: (config) => {
     // Fix for handling video files
     config.module.rules.push({
