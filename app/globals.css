@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0A192F;
+  --navy-darker: #02060D;
+  --navy-light: #112240;
+  --navy-lighter: #1A2F4F;
+  --gold: #D4AF37;
+  --gold-light: #F2D272;
+  --gold-dark: #AF8B21;
+  --divine-white: #F8F9FA;
+}
+
+body {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--navy-darker);
+  color: var(--divine-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Typography Extensions */
+.font-cinzel {
+  font-family: var(--font-cinzel), serif;
+  letter-spacing: 0.05em;
+}
+
+/* Divine Background Effects */
+.bg-divine-light {
+  background: radial-gradient(circle at 50% -20%, rgba(212, 175, 55, 0.15), transparent 70%),
+    radial-gradient(circle at 0% 0%, rgba(10, 25, 47, 1), transparent 50%),
+    var(--navy-darker);
+}
+
+.bg-divine-radial {
+  background: radial-gradient(circle at center, rgba(26, 47, 79, 0.8) 0%, var(--navy-darker) 100%);
+}
+
+/* Enhanced Glassmorphism */
+.glass-panel {
+  background: rgba(17, 34, 64, 0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-heavy {
+  background: rgba(5, 13, 26, 0.7);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(17, 34, 64, 0.4) 100%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(17, 34, 64, 0.6) 100%);
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(212, 175, 55, 0.1);
+  transform: translateY(-4px);
+}
+
+/* Animated Glimmer */
+@keyframes glimmer {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.animate-glimmer {
+  animation: glimmer 3s ease-in-out infinite;
+}
+
+/* Fade In Animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+/* Glow Pulse Animation */
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.4), 0 0 60px rgba(212, 175, 55, 0.2);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Bounce Slow Animation */
+@keyframes bounce-slow {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+/* Text Enhancements */
+.text-gold-gradient {
+  background: linear-gradient(to right, var(--gold-light), var(--gold), var(--gold-dark));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-divine-title {
+  font-family: var(--font-cinzel), serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--navy-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, var(--gold-dark), var(--gold));
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-light);
+}
+
+/* Section Spacing */
+.section-padding {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .section-padding {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Divine Effects */
+.shadow-divine {
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+}
+
+.border-divine {
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}

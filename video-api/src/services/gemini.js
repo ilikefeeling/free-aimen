@@ -1,0 +1,223 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleAIFileManager, FileState } = require('@google/generative-ai/server');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is required');
+}
+
+// Initialize File Manager
+const fileManager = new GoogleAIFileManager(GEMINI_API_KEY);
+
+/**
+ * Retry wrapper with exponential backoff
+ */
+async function retryWithBackoff(fn, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            const errorMsg = error.message || '';
+            const isOverloaded = errorMsg.includes('overloaded') || errorMsg.includes('503');
+            const isQuota = errorMsg.includes('429') || errorMsg.includes('quota');
+
+            if ((isOverloaded || isQuota) && attempt < maxRetries) {
+                let delay = isQuota ? 30000 : Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+
+                const retryMatch = errorMsg.match(/retry in ([\d.]+)s/i);
+                if (retryMatch) delay = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1000;
+
+                console.log(`⚠️ Gemini API retry in ${delay / 1000}s (attempt ${attempt}/${maxRetries})...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+/**
+ * Analyze video with Gemini using File API for stability
+ */
+async function analyzeVideoWithGemini(videoUrl, title, options = {}) {
+    const { onProgress, targetLanguage = 'korean' } = options;
+    const tempDir = path.join(__dirname, '../../temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+    const tempFilePath = path.join(tempDir, `gemini-upload-${Date.now()}.mp4`);
+    let fileMeta;
+
+    try {
+        onProgress?.(5);
+        console.log('🎥 Downloading video for Gemini upload...');
+
+        // 1. Download to local temp for File API upload
+        const response = await axios({
+            method: 'get',
+            url: videoUrl,
+            responseType: 'stream'
+        });
+
+        const writer = fs.createWriteStream(tempFilePath);
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+
+        onProgress?.(15);
+        console.log('⬆️ Uploading to Gemini File API...');
+
+        // 2. Upload using File API
+        const uploadResponse = await fileManager.uploadFile(tempFilePath, {
+            mimeType: 'video/mp4',
+            displayName: title,
+        });
+        fileMeta = uploadResponse.file;
+        console.log(`📄 File uploaded: ${fileMeta.name}`);
+
+        onProgress?.(25);
+
+        // 3. Poll for file status (ACTIVE)
+        console.log('⏳ Waiting for video processing...');
+        let file = await fileManager.getFile(fileMeta.name);
+        let pollCount = 0;
+        const maxPolls = 60; // 5 minutes (5s * 60)
+
+        while (file.state === FileState.PROCESSING) {
+            if (pollCount >= maxPolls) {
+                throw new Error('Timeout: Video processing took too long at Gemini');
+            }
+            process.stdout.write('.');
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            file = await fileManager.getFile(fileMeta.name);
+            pollCount++;
+            onProgress?.(Math.min(25 + pollCount, 70));
+        }
+
+        if (file.state === FileState.FAILED) {
+            throw new Error('Gemini File API: Video processing failed');
+        }
+
+        console.log('\n✅ Video is ACTIVE. Starting analysis...');
+        onProgress?.(75);
+
+        // 4. Generate content
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+            }
+        });
+
+        const prompt = `당신은 전문 영상 자막 제작자이자 다국어 번역 전문가, 설교 영상 분석 전문가입니다. 
+제공된 설교 영상의 음성을 분석하여 ${targetLanguage === 'korean' ? '핵심 하이라이트' : targetLanguage + ' 외국어 자막 및 하이라이트'}를 생성하는 것이 당신의 임무입니다.
+
+영상 제목: "${title}"
+선택된 대상 언어: ${targetLanguage}
+
+**[업무 지침]**
+1. **내용 분석**: 영상의 음성을 인식하여 핵심 메시지가 담긴 하이라이트 3-5개를 추출하십시오.
+2. **자막 생성 (STT 및 번역)**: 영상 전체 또는 주요 구간에 대해 다음 원칙에 따라 자막 데이터를 생성하십시오.
+   - **타임코드**: 각 문장의 시작과 끝 시간을 초(seconds) 단위의 숫자로 정확히 측정하십시오.
+   - **자연스러운 번역**: 단순 직역이 아닌 문맥에 맞는 의역을 우선하며, 해당 언어권의 통용 어휘를 사용하십시오.
+   - **가독성**: 자막 한 줄당 글자 수는 20자 내외로 제한하십시오.
+   - **무음 구간**: 음성이 없는 구간은 자막을 생성하지 마십시오.
+
+반드시 다음 JSON 구조를 정확히 지켜주세요:
+{
+  "highlights": [
+    {
+      "title": "강렬한 하이라이트 제목",
+      "startTime": 120, 
+      "endTime": 180,
+      "caption": "영상 하단 표시용 번역된 자막 (선택 언어)",
+      "emotion": "감동적인 | 은혜로운 | 도전적인",
+      "platform": "youtube_shorts | instagram_reels"
+    }
+  ],
+  "subtitles": [
+    {
+      "index": 1,
+      "startTime": 1.5,
+      "endTime": 4.2,
+      "text": "번역된 자막 내용 (선택 언어: ${targetLanguage})"
+    }
+  ],
+  "summary": "전체 설교의 핵심 메시지 요약 (번역된 언어)"
+}
+
+**제약 사항:**
+1. 하이라이트 개수: 3~5개
+2. 하이라이트 구간 길이: 30초~90초
+3. 모든 텍스트(제목, 캡션, 자막, 요약)는 반드시 선택된 언어(${targetLanguage})로 작성하십시오.
+4. 답변은 반드시 유효한 JSON 객체여야 하며, 다른 설명이나 인사말을 포함하지 마세요.`;
+
+        const parsedData = await retryWithBackoff(async () => {
+            const result = await model.generateContent([
+                {
+                    fileData: {
+                        mimeType: file.mimeType,
+                        fileUri: file.uri
+                    }
+                },
+                { text: prompt },
+            ]);
+            const responseText = result.response.text();
+            console.log('📝 Gemini 2.5 Flash response received');
+
+            let parsedData;
+            try {
+                // Try direct parse
+                parsedData = JSON.parse(responseText);
+            } catch (e) {
+                console.warn('⚠️  Standard JSON parse failed, trying extraction...');
+                // Fallback: Use regex to extract JSON block if preamble exists
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try {
+                        parsedData = JSON.parse(jsonMatch[0]);
+                    } catch (e2) {
+                        console.error('❌ JSON extraction failed:', e2.message);
+                        console.debug('Raw text was:', responseText);
+                        throw new Error('Failed to parse Gemini JSON response (Extraction Error)');
+                    }
+                } else {
+                    console.error('❌ No JSON block found in response');
+                    console.debug('Raw text was:', responseText);
+                    throw new Error('Failed to parse Gemini JSON response (No JSON found)');
+                }
+            }
+
+            if (!parsedData.highlights || !Array.isArray(parsedData.highlights)) {
+                throw new Error('Invalid response: highlights array missing');
+            }
+
+            return parsedData;
+        });
+
+        onProgress?.(100);
+        console.log(`✅ Analysis complete: ${parsedData.highlights.length} highlights`);
+
+        return parsedData;
+
+    } catch (error) {
+        console.error('❌ Gemini Error:', error.message);
+        throw error;
+    } finally {
+        // Cleanup temp file
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+    }
+}
+
+module.exports = {
+    analyzeVideoWithGemini
+};
